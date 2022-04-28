@@ -6,6 +6,7 @@ import dir_indexing
 import default_admin
 import pred_location
 import file_download
+import options_method
 
 ## 웹 페이지 정보 호출
 
@@ -33,6 +34,8 @@ with requests.Session() as s: # 쿠키가 안맞아서 요청 url과 적은 url�
     # 서버 정보 탐색
     print("< 헤더를 이용한 서버 정보 >\n ",Server_info.use_header(url, cookie))
     print("< 오류페이지를 이용한 서버 정보 >\n ", Server_info.use_errer_page(ori_url))
+    # 불필요한 메소드 확인
+    print("< 불필요한 메소드 확인 > \n", options_method.unnecessary_method(url))
     # 디렉토리 인덱싱 여부 확인
     print("< 디렉토리 인덱싱 여부 확인 >\n ",dir_indexing.dir_indexing(split_url, cookie))
     # 관리자 페이지 노출 확인
