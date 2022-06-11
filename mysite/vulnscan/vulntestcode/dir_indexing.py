@@ -1,7 +1,9 @@
 import requests
 
 ## 디렉토리 인덱싱 진단
-def dir_indexing(split_url, cookie):
+def dir_indexing(s, url):
+    split_url = url.split('/')
+
     indexing_payloads = [
     '/', '/icons/', '/images/', '/pr/', '/adm', '/files',
     '/download', '/config' '/files/attach/images', '/data/',
@@ -12,7 +14,7 @@ def dir_indexing(split_url, cookie):
     for url_shard in split_url[2:-1]:
         check_url+="/"+url_shard
         for payload in indexing_payloads:
-            req = requests.get(check_url+payload, cookies=cookie)
+            req = s.get(check_url+payload)
             if req.status_code == 200 :
                 if req.text.lower().find('index of') != -1:
                     index_urls.append(req.url)

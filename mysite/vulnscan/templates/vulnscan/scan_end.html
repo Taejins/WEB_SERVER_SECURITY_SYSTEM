@@ -1,0 +1,305 @@
+{% extends 'vulnscan/base.html' %}
+{% load static %}
+{% block contents %}
+<div class="container pt centered">
+    <button class="bb btn btn-lg" onclick=toPDF()>PDF 저장</button>
+</div>
+<div class="container pt" id="doc"> 
+    <div class="row mt">
+        <div class="col-lg-6 col-lg-offset-3 centered">
+            <h4>검사 준비 > 검사 중 > 검사 완료 > <span class="highlight">검사 결과</span></h4>
+            <h1>취약점 진단 결과</h1>
+            <hr>
+        </div>
+    </div>  
+
+    <div class="row-mt">
+        <div class="col-lg-4 col-lg-offset-2 custom-border" style="background-color:rgb(228, 228, 228);">
+            <div class="col-lg-8">
+                <canvas id="pie-chart" width="100" height="100"></canvas>
+            </div>
+            <div class="col-lg-4 centered">
+                <br>
+                <H3>총점</H3>
+                <H1 id="score" style="font-weight:800; font-size:60px;"></H1>
+            </div>
+            
+        </div>
+
+        <div class="col-lg-5 col-lg-offset-1">
+            <div style="text-align: left;">
+                <h1 id="report_msg">준비 중</h1>
+                <h5 id="url">검사 URL</h5>
+                <h5 id="time_taken">소요시간 : </h5>
+                <h5 id="total_h">발견된 항목 : /</h5>
+            </div>
+            <!-- <p> 검사 일시 : {{ info }} </p> -->
+        </div>
+    </div>
+    
+    <div class="row mt">
+        <div class="col-lg-10 col-lg-offset-1 centered">
+            <h1>점검 항목</h1>
+            <hr>
+            <div class="row mt">
+                <div class="col-lg-6">
+                    <h4>노출된 정보 취약점</h4>
+                    <p>해당 서버의 노출된 정보를 파악하고 해커가 서버에 큰 영향을 미치는 공격을 가할 수 있으므로 해당 노출된 정보 취약점을 점검하고 위험도를 표시합니다.</p>
+                    <div style="background-color:rgb(228, 228, 228);">
+                        <b>서버 정보 노출(오류페이지, HTTP 헤더), 불필요한 메소드,<br/> 
+                            취약한 관리자 페이지 위치, 디렉터리 인덱싱, 위치 공개, 파일 다운로드 취약점</b>
+                    </div>
+                    
+                </div>
+                <div class="col-lg-6">
+                    <h4>INPUT 취약점</h4>
+                    <p>사용자로부터 입력받는 정보들이 해커가 서버의 악영향을 끼치는 공격 코드를 삽입했을 때, 해당 서버에 미치는 영향 여부를 파악하고 위험도를 표시합니다.</p>
+                    <div style="background-color:rgb(228, 228, 228);">
+                        <b>XSS, SQL, SSI 취약점</b>
+                    </div>
+                    
+                </div>
+            </div>
+            <div class="row mt">
+                <div class="col-lg-6">
+                    <h4>점검 결과</h4> 
+                    <span id="open_span">개의 점검항목 중 개 검출</span>
+                    <div class="progress">
+                        <div id="open_progress" class="progress-bar progress-bar-theme" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 90%;">
+                          <span class="sr-only">60% Complete</span>
+                        </div>
+                      </div>
+                </div>
+                <div class="col-lg-6">
+                    <h4>점검 결과</h4> 
+                    <span id="input_span">개의 점검항목 중 개 검출</span>
+                    <div class="progress">
+                        <div id="input_progress" class="progress-bar progress-bar-theme" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 20%;">
+                          <span class="sr-only">60% Complete</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> 
+    <div class="row mt">
+        <div class="col-lg-10 col-lg-offset-1 centered">
+            <h1>검출된 취약점 정보</h1>
+            (클릭 시 취약점 보완 방법을 볼 수 있습니다)
+            <hr>
+            <div id="summary"></div>
+        </div>
+    </div> 
+    <div class="row mt">
+        <div class="col-lg-10 col-lg-offset-1 centered">
+            <h1>상세 정보</h1>
+            <hr>
+        </div>
+    </div> 
+    <div class="row mt">
+        <div class="col-lg-10 col-lg-offset-1 centered">
+            <table id="vuln_result" class="table table-bordered" style="word-break: break-all;">
+                <tr>
+                    <th style="width:23%">점검 취약점</th>
+                    <th style="width:7%">위험도</th>
+                    <th style="width:70%">검출된 취약점 정보</th>
+                </tr>
+                
+            </table>
+        </div>
+        
+        
+
+    </div>    
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+<script src="{% static 'js\html2pdf.bundle.js' %}"></script>
+<script>
+
+
+
+var data = "{{ info }}"
+data = data.replaceAll(/&quot;/g, '\"')
+data = JSON.parse(data)
+var detect_total = data.open_cnt+data.input_cnt
+
+
+window.addEventListener('DOMContentLoaded', function(){
+    init_page_setting()
+    
+});
+
+
+
+function init_page_setting(){
+    var score = 100
+    if (data.open_cnt>6){
+        score-=30
+    }
+    else if(data.open_cnt>3){
+        score-=20
+    }
+    else if(data.open_cnt>0){
+        score-=10
+    }
+    else{}
+
+    if (data.input_cnt>2){
+        score-=60
+    }
+    else if(data.input_cnt>1){
+        score-=40
+    }
+    else if(data.input_cnt>0){
+        score-=30
+    }
+    else{}
+
+    $('#score').text(score+"")
+    $("#report_msg").empty()
+    if (score>=90){
+        $("#report_msg").append("<b style='color:greenyellow'>[ 안전 ]</b>한 상태")
+    }else if(score>=70){
+        $("#report_msg").append("<b style='color:rgb(236, 233, 42)'>[ 주의 ]</b>가 필요")
+    }else{
+        $("#report_msg").append("<b style='color:crimson'>[ 취약 ]</b>한 상태")
+    }
+
+    $("#url").append("<h4>"+data.url+"</h4>")
+    $("#time_taken").text("소요시간 : "+data.time_taken+"초")
+    $("#total_h").text("검출된 항목 수 : "+detect_total+"/10")
+    $("#open_span").text("7개의 점검항목 중 "+data.open_cnt+"개의 취약점 탐지")
+    $("#input_span").text("3개의 점검항목 중 "+data.input_cnt+"개의 취약점 탐지")
+    $("#open_progress").attr("style", "width: "+data.open_cnt/7*100+"%;")
+    $("#input_progress").attr("style", "width: "+data.input_cnt/3*100+"%;")
+
+    method = data.method
+    indexing = data.indexing
+    admin = data.admin
+    pred_loc = data.pred_loc
+    server_header = data.server_header
+    server_error = data.server_error
+    file_download = data.file_download
+    sqli = atob(data.sqli)
+    xss = xss_filter(atob(data.xss))
+    sqli_array = sqli //예외 처리 
+    xss_array = dic_to_list(xss)
+    ssii = dic_to_list(xss_filter(atob(data.ssii)))
+
+    console.log(ssii)
+
+
+    // 요약 정보 채우기
+    if(method.length>0){make_summary_data(1,"불필요한 메소드", "HTTP Method 중 OPTIONS, PUT, DELETE Method가 탐지되었습니다.<br/> 이 경우 임의로 서버 내 정보를 확인하거나 파일의 생성 및 삭제가 가능하기 때문에 비인가 사용자에 의한 조작의 위험이 있어 보완이 필요합니다.")}
+    if(indexing.length>0){make_summary_data(2,"디렉토리 인덱싱", "파일이 존재하지 않을 때 자동적으로 디렉토리 리스트를 출력하는 취약점입니다.<br/>해당 디렉터리의 파일 리스트를 브라우저에 보여주게 되며 이는 공격자에게 웹 응용시스템의 구조를 파악 할 수 있기 때문에 보완이 필요합니다.")}
+    if(admin.length>0){make_summary_data(3,"기본 관리자 위치", "관리자 페이지가 쉽게 접근할 수 있는 위치에 있습니다.<br/> 관리자 페이지가 추측 가능한 형태로 구성되어 있을 경우 공격자가 관리자 페이지에 쉽게 접근할 수 있으며 무차별 대입 공격을 통해 관리자 권한을 탈취 당할 수 있어 보완이 필요합니다.")}
+    if(pred_loc.length>0){make_summary_data(4,"예측가능한 위치", "웹 서버 샘플 디렉토리 및 파일이 노출되어 있습니다.<br/> 폴더나 파일명의 위치가 예측 가능하여 쉽게 노출될 경우 공격자는 이를 악용하여 대상에 대한 정보를 획득하고 민감한 데이터에 접근 가능하기 때문에 보완이 필요합니다.")}
+    if(server_header.length>0 || server_error.length>0){make_summary_data(5,"서버 정보 노출", "헤더 및 오류페이지에서 서버 정보가 노출되어 있습니다.<br/> 해당 항목이 취약한 이유는 공격자가 버전을 확인하여 CVE 취약점을 검색해 공격을 시도할 수 있기 때문에 보완이 필요합니다.")}
+    if(file_download.length>0){make_summary_data(6,"파일 다운로드", "다운로드 시 경로, 파일 우회가 가능한 취약점이 검출되었습니다.<br/> 필터링 하지 않으면 공격자가 이를 조작하여 허용되지 않은 파일을 다운 받을 수 있고 임의의 위치에 있는 파일을 열람하거나 다운받는 것을 가능하므로 보완이 필요합니다.")}
+    if(sqli.length>0){
+        make_summary_data(7,"SQL Injection", "사용자의 입력에 따라 DBMS가 조작되는 취약점이 검출되었습니다<br/> 입력 값을 변조하여 비정상적인 SQL 쿼리를 조합하거나 실행하는 공격. 개발자가 생각지 못한 SQL문을 실행되게 함으로써 데이터베이스를 비정상적으로 조작 가능하기 때문에 보완이 필요합니다.")
+        sqli_array = sqli.slice(1,-1).split(',') // 값 있을 때만 배열로 만듬
+    }
+    if(xss.length>0){make_summary_data(8,"Cross Site Script", "사용자가 입력한 스크립트가 동작하는 취약점이 검출되었습니다.<br/> 자바스크립트를 임의의 사용자나 공격자가 웹에 삽입하거나 실행을 유도하여 클라이언트를 공격할 수 있으므로 보완이 필요합니다. ")}
+    if(ssii.length>0){make_summary_data(9,"SSI Injection", "SSI에서 명령문이 동작하는 취약점이 검출되었습니다.<br/> 입력받은 변수 값을 서버 측에서 처리할 때 부적절한 명령문이 포함 및 실행되어 서버의 데이터가 유출될 수 있으므로 보완이 필요합니다.")}
+    
+    
+
+    // 상세 정보 채우기
+    make_table("불필요한 메소드 점검","상",method)
+    make_table("디렉토리 인덱싱 기능 점검","상",indexing)
+    make_table("기본 관리자 위치 점검","중",admin)
+    make_table("예측가능한 위치 점검","중",pred_loc)
+    make_table("서버 정보 노출 점검(헤더)","중",server_header)
+    make_table("서버 정보 노출 점검(오류 페이지)","중",server_error) 
+    make_table("파일 다운로드 취약점 점검","상",file_download)
+    make_table("SQL Injection 취약점 점검","상",sqli_array)
+    make_table("Cross Site Script 취약점 점검","상",xss_array)
+    make_table("SSI Injection 취약점 점검","상",ssii)
+    
+    new Chart(document.getElementById("pie-chart"), {
+    type: 'pie',
+    data: {
+    //   labels: ["Detected", "Safety"],
+      datasets: [{
+        label: "취약점 진단 결과",
+        backgroundColor: ["#CC0033", "#008000"],
+        data: [100-score,score]
+      }]
+    },
+    // options: {
+    //   title: {
+    //     display: false,
+    //     text: 'Predicted world population (millions) in 2050'
+    //   }
+    // }
+});
+}
+function make_summary_data(num, name, summary_str){
+    
+    temp = '<div class="custom-border row" onclick="move_summary('+num+')" style="padding-bottom:0px; height:120px;"><div class="col-lg-3"><h3>'
+    temp += name
+    temp += '<br/>취약점</h3></div><div class="col-lg-9" style="text-align:left"><p>'
+    temp += summary_str
+    temp += '</p></div></div>'
+
+    $("#summary").append(temp)
+}
+function move_summary(num){
+    window.open("/vuln_info/#"+num,"취약점 설명")
+
+}
+function make_table(name, risk, array){
+    length = array.length
+    temp = ""
+    $.each(array, function(index, item){
+        if(index==0){
+            temp += "<tr><td rowspan='"+length+"'>"+name+"</td>"
+            temp += "<td rowspan='"+length+"'>"+risk+"</td>"
+            temp += "<td>"+item+"</td>"
+        }
+        else{
+            temp += "<tr><td>"+item+"</td></tr>"
+        }
+        if(index==array.length-1){
+            temp += "</tr>"
+        }
+    })
+    $("#vuln_result").append(temp)
+}
+
+function dic_to_list(content){
+    array = new Array();
+    m_content = content
+    s_pos = 0
+    e_pos = 0
+    while(m_content.length>30){
+        s_pos = m_content.indexOf("{")+1
+        e_pos = m_content.indexOf("}")
+        array.push(m_content.substring(s_pos,e_pos))
+        m_content = m_content.substr(e_pos+1)
+    }    
+    return array
+}
+
+
+function xss_filter(content){
+            return content.replaceAll(/</g, "&lt;").replaceAll(/>/g, "&gt;")
+        }
+
+
+
+function toPDF(){
+    html2pdf().from(document.getElementById('doc')).set({
+        margin: 10,
+        filename: 'report.pdf',
+        html2canvas: { scale: 1, width: 1200 ,y: 80},
+        jsPDF: {orientation: 'portrait', unit: 'mm', format: 'a4', compressPDF: true}
+    }).save();
+}
+
+</script>
+
+{% endblock %}

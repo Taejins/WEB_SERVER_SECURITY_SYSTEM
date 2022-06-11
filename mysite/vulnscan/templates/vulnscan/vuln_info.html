@@ -1,0 +1,455 @@
+{% extends 'vulnscan/base.html' %}
+{% load static %}
+{% block contents %}
+<div class="row mt">
+    <div class="col-lg-6 col-lg-offset-3 centered">
+        <h1>취약점 설명 및 보완 방법</h1>
+        <hr>
+    </div>
+</div>
+<div id="grey">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2">
+                <h2 id="1" style="text-align: center;">[ 불필요한 메소드 취약점 ] </h2>
+                <br>
+                <h3>&nbsp;&nbsp;취약점 설명</h3>
+                <p>HTTP(Hypertext Transfer Protocol)는 웹 클라이언트가 웹 서버에게 요청의 목적을 알리기 위해 Method라는 수단을 이용한다.
+                    Method는 목적에 따라 GET, POST, HEAD, PUT, DELETE, OPTIONS 등으로 분류되며 사전에 정의된 행위를 수행하게 된다. 
+                    이 중 PUT, DELETE Method의 경우 임의로 서버 내 파일의 생성 및 삭제가 가능하기 때문에 비인가 사용자에 의한 조작의 위험이 있어
+                    사전예방 관점에서 취약점 존재여부를 진단하고 대응하게 된다.</p>
+
+                <h3>&nbsp;&nbsp;대응 방안</h3>
+                <h4> - IIS</h4>
+                <pre>
+실행 -> inetmgr -> 요청 필터링 -> 동사 거부 -> 차단할 메소드 설정</pre>
+                <h4> - Apache</h4>
+                <pre>
+sudo vi /etc/httpd/conf/httpd.conf를 통해 httpd.conf 파일 설정
+설정이 필요한 Directory에 Limit을 이용해 막고자 하는 HTTP Method를 입력
+&lt;Directory /&gt;
+    &lt;Limit DELETE OPTIONS&gt;
+        Order allow,deny
+        Allow from all
+    &lt;/Limit&gt;
+&lt;/Directory&gt;</pre>
+                <h4> - NginX</h4>
+                <pre>
+sudo vi /etc/nginx/nginx.conf
+...중략...
+location / {
+        limit_except 허용할 메소드 설정 { 
+        deny all;
+        }
+}</pre>
+                
+            </div>
+        </div>
+        <!-- /row -->
+    </div>
+</div>
+<div id="white">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2">
+                <h2 id="2" style="text-align: center;">[ 디렉토리 인덱싱(리스팅) 취약점 ] </h2>
+                <br>
+                <img src="{% static '/img/vuln_info/indexing.jpg' %}" width="100%" height="auto">
+                <br>
+                <h3>&nbsp;&nbsp;취약점 설명</h3>
+                <p>본 페이지(index.html, home.html, default.asp 등)의 파일이 존재하지 않을 때 자동적으로 디렉토리 리스트를
+                    출력하는 취약점으로, 웹 서버 운영 시 특정 디렉터리에 초기화 파일이 없을 경우(index.html, default.html 등…)
+                    해당 디렉터리의 파일 리스트를 브라우저에 보여주게 되며 이는 공격자에게 웹 응용시스템의 구조를 파악 할 수 있도록
+                    하며 민감한 정보가 포함된 설정 파일을 노출 하여 보안상 심각한 위험을 초래 할 수 있으므로 반드시 해당 기능을 중지 시켜야 한다.</p>
+                <h3>&nbsp;&nbsp;대응 방안</h3>
+                <h4> - IIS</h4>
+                <pre>
+설정 > 제어판 > 관리도구 > “인터넷 서비스 관리자” 선택
+해당 웹사이트에 오른쪽 클릭을 하고 등록정보의 [홈 디렉토리] 탭에서 [디렉토리 검색] 체크 해제</pre>
+                <h4> - Apache</h4>
+                <p>Httpd.conf 파일에서 DocumentRoot 항목의 Options 에서 Indexes를 제거한다. Indexes가 해당 디렉터리의 파일 목록을 보여주는 지시자 이다.</p>
+                <pre>
+&lt;Directory “/var/www/html”&gt;
+Options Indexes //제거
+&lt;/Directory&gt;</pre>
+                <h4> - NginX</h4>
+                <pre>
+server {
+    server_name test.domain.com;
+    location = / {
+            root /var/datas/download;
+            autoindex off; //off로 설정하여 디렉토리 인덱싱 차단
+    }
+}</pre>
+                
+            </div>
+        </div>
+        <!-- /row -->
+    </div>
+</div>
+<div id="grey">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2">
+                <h2 id="3" style="text-align: center;">[ 관리자 페이지 노출 취약점 ] </h2>
+                <br>
+                <img src="{% static '/img/vuln_info/admin_vuln.jpg' %}" width="100%" height="auto">
+                <br>
+                <h3>&nbsp;&nbsp;취약점 설명</h3>
+                <p>웹 어플리케이션의 전반적인 기능 설정 및 회원 관리를 할 수 있는 관리자 페이지가 추측 가능한 형태로
+                   구성되어 있을 경우 공격자가 관리자 페이지에 쉽게 접근할 수 있으며 무차별 대입 공격을 통해 관리자 권한을 획득할 수 있는 취약점이다.</p>
+                <h3>&nbsp;&nbsp;대응 방안</h3>
+                <h4> - 관리자 페이지의 주소를 일반인이 추측하기 어려운 명칭으로 변경하고 관리자 페이지 접근 포트도 변경</h4>
+                <pre>
+(1) 네임 서버에서 'admin' 도메인명을 'mer' 등으로 변경
+예시 : http://admin.xx.kr-> http://mer.xx.kr  
+
+(2) 웹 서버에서 'admin' 디렉터리명을 'mer' 등으로 변경
+예시 : http://www.xxx.xx.kr/admin/index.php -> http://www.xxx.xx.kr/mer </pre>
+                <h4> - 관리자 페이지는 지정된 관리자 단말 PC (내부 IP)에서만 접속이 가능하도록 설정</h4>
+                <h5>php (IP 주소 필터링) </h5>
+                <pre>
+if($admin_row[adminId]==$adminId && $admin_row[adminPwd]==$adminPwd)
+{
+    $allowed_ip = Array("192.168.161.2");
+    if(!in_array($_SERVER['REMOTE_ADDR'], $allowed_ip))
+    {
+        header('HTTP/1.0 404 Not Found');
+        die("This ip address is inaccessible.");
+    }
+        ...중략...
+}</pre>               
+            </div>
+        </div>
+        <!-- /row -->
+    </div>
+</div>
+<div id="white">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2">
+                <h2 id="4" style="text-align: center;">[ 위치 공개 취약점 ] </h2>
+                <br>
+                <h3>&nbsp;&nbsp;취약점 설명</h3>
+                <p>폴더나 파일명의 위치가 예측 가능하여 쉽게 노출될 경우 공격자는 이를 악용하여 대상에 대한 
+                    정보를 획득하고 민감한 데이터에 접근 가능하기 때문에 보안을 위해 설정해야하는 취약점이다.</p>
+                <h3>&nbsp;&nbsp;대응 방안</h3>
+                <h4>1. Apache, IIS, Tomcat 등 각 웹 서버 설정 시 함께 제공되는 샘플 디렉터리 및 매뉴얼 디렉터리, 샘플 애플리케이션을 삭제하여 보안 위험을 최소화함</h4>
+                <h4>2. 삭제해야 할 파일 확장자 예시</h4>
+                <pre>
+*.bak *.backup *.org *.old *.new *.txt *.zip *.log *.! *.sql *.tmp *.temp </pre>
+                <h4>3. /index.html, /phpinfo.php, /phpmyadmin 으로 Direct하는 경로 차단</h4>
+              
+            </div>
+        </div>
+    </div>
+</div>
+<div id="grey">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2">
+                <h2 id="5" style="text-align: center;">[ 서버 정보 노출 취약점 ] </h2>
+                <br>
+                <h3>&nbsp;&nbsp;취약점 설명</h3>
+                <p>- 서버 정보 노출 취약점이란 서버/OS의 종류, 버전, 설치된 모듈 등의 정보가 응답 헤더, 오류 페이지에 노출이 되는 취약점이다.
+                     해당 항목이 취약한 이유는 공격자가 버전을 확인하여 CVE 취약점을 검색해 공격을 시도할 수 있기 때문이다.</p>
+                <h3>&nbsp;&nbsp;대응 방안</h3>
+                <h4>- 헤더 노출</h4>
+                <h5>1. IIS</h5>
+                <pre>
+URL 재작성 -> 아웃바운드 규칙 -> 빈 규칙 -> 값 부분에 원하는 값 입력 or 공백</pre>
+                <h5>2. NginX</h5>
+                <pre>
+sudo vi /etc/nginx/nginx.conf
+nginx.conf 파일에서 server_tokens을 off로 설정한다.</pre>
+                <h5>3. Apache</h5>
+                <pre>
+sudo vi /etc/apache2/apache2.conf
+apache2.conf 파일에서 ServerTokens을 Prod로 설정한다.</pre>
+                <h5>4. X-Powered-By 정보 노출 조치</h5>
+                <pre>
+sudo find / -name php.ini -> php의 관리 파일
+sudo vi /etc/php5/apache2/php.ini
+php.ini 파일에서 expose_php를 Off로 설정한다.</pre>
+                <h4>- 오류페이지 노출</h4>
+                <h5>1. IIS</h5>
+                <pre>
+설정 -> 제어판 -> 관리도구 -> 인터넷 서비스 관리자 -> 등록정보 -> 사용자 정의 오류 등록 정보 편집을 통해 사용자 정의 에러페이지를 지정.
+URLScan을 설치하여 Urlscan.ini 파일의 RemoveServerHeader 값을 1로 설정(IIS5버전)
+HKLM\SYSTEM\CurrentControlSet\Services\HTTP\Parameters\DisableServerHeader 값 1로 설정(IIS6버전)</pre>
+                <h5>2. Apache</h5>
+                <p>특정 에러 코드에 대해 에러 메시지 출력 및 특정 웹페이질 redirect 하도록 설정</p>
+                <pre>
+ErrorDocument 500 “Error Message”
+ErrorDocument 404 “/your web root/error.html”
+ErrorDocument 404 “/your web root/error.html”
+ErrorDocument 402 http:/xxx.com/error.html
+                </pre>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="white">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2">
+                <h2 id="6" style="text-align: center;">[ 파일 다운로드 취약점 ] </h2>
+                <br>
+                <img src="{% static '/img/vuln_info/download_vuln.jpg' %}" width="100%" height="auto">
+                <br>
+                <h3>&nbsp;&nbsp;취약점 설명</h3>
+                <p>파일 다운로드 기능이 존재하는 웹에서 파일 다운로드 시 파일의 경로 및 파일명을 파라미터로 받아 처리하는 경우
+                     이를 적절히 필터링 하지 않으면 공격자가 이를 조작하여 허용되지 않은 파일을 다운 받을 수 있고 임의의 위치에
+                      있는 파일을 열람하거나 다운받는 것을 가능케 하는 취약점.
+                </p>
+                <h3>&nbsp;&nbsp;대응 방안</h3>
+                <h4>1. 시퀀스 사용</h4>
+                <p>시퀀스 넘버를 통해 파일을 다운로드 하도록 구성하면, 직접적으로 경로를 조작 할 수 없으므로 다운로드 공격을 예방</p>
+                <pre>ex) http://test.site.com/down?seq=1344</pre>
+                <h4>2. 다운로드 디렉토리 한정</h4>
+                <p>시스템에 존재하는 임의의 파일을 다운로드 받지 못하도록 제한</p>
+                <h4>3. 문자열 필터링</h4>
+                <p>상위 디렉토리에 해당하는 ../, .. “”  등을 필터링</p>
+                <h5>- ASP</h5>
+                <pre>
+file = Request.form(“file”)
+    Response.ContentType = “application/unknown”
+    Response.AddHeader “Content-Disposition”, “attachment; filename=” & file
+    Set objStream = Server.CreateObject(“ADODB.Stream”)
+    strFile = Server.MapPath(“./uploadfiles”) & “ \” & file
+    strFname = Mid(Fname, InstrRev(file, “ \”) +1)
+if strFile = strFPath Then</pre>
+                <h5>- PHP</h5>
+                <pre>
+if (preg_match(“/[^a-z0-9_-]/I”, $up_dir))
+    print “디렉터리의 특수 문자 체크”;
+    exit;
+if(preg_match(“/[^\xA1-\xFEa-z0-9._-]/I”, urldecode($dn_file_name)))
+    print "파일 이름의 특수문자 체크";
+    exit;</pre>
+                <h5>- JSP</h5>
+                <pre>
+String UPLOAD_PATH= "/var/www/upload/";
+String filename= response.getParameter("filename");
+String filepathname = UPLOAD_PATH + filename;
+
+if(filename.equalsIgnoreCase(".") || filename.equalsIgnoreCase("/")||
+    filename.equalsIgnoreCase(" \"))
+// 파일명 체크
+return 0;
+
+// 파일 전송 루틴
+    response.setContentType("application/unknown; charset=euc-kr");
+    response.setHeader("Content-Disposition","attachment;filename=" + filename + ";");
+    response.setHeader("Content-Transfer-Encoding:" , "base64");
+try {
+    BufferedInputStream in = new BufferedInputStream(new
+    FileInputStream(filepathname));
+.........
+} catch(Exception e) {
+// 에러 체크 [파일 존재 유무 등]
+}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="grey">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 col-lg-offset-2">
+            <h2 id="7" style="text-align: center;">[ SQL 인젝션 ] </h2>
+            <br>
+            <img src="{% static '/img/vuln_info/sqli1.jpg' %}" width="100%" height="auto">
+            <br>
+            <h3>&nbsp;&nbsp;취약점 설명</h3>
+            <p>사용자의 입력 값으로 웹 사이트 SQL 쿼리가 완성되는 약점을 이용하며, 입력 값을 변조하여 비정상적인 SQL 쿼리를 조합하거나 실행하는 공격. 
+                개발자가 생각지 못한 SQL문을 실행되게 함으로써 데이터베이스를 비정상적으로 조작이 가능하다. </p>
+            <h4> - Error based SQL Injection</h4>      
+            <img src="{% static '/img/vuln_info/sqli2.jpg' %}" width="100%" height="auto">
+            <p>에러를 유발하여 DMBS에서 오류를 출력하면 입력값에 대한 검증이 없음을 확인할 수 있다. 그 뒤 악의적인 사용자가 임의의 SQL 구문을 주입하여
+            계정 정보를 모두 탈취 할 수 있으며, 관리자 계정을 얻을 수 있어서 관리자 계정을 탈취한 악의적인 사용자는 관리자의 권한을 이용해 또 다른 피해를 입힐 수 있다.</p>
+            <h4> - Boolean based SQL Injection</h4>      
+            <img src="{% static '/img/vuln_info/sqli3.jpg' %}" width="100%" height="auto">
+            <p>Boolean based SQL Injection은 단순 페이로드로 오류를 확인할 수 없고 눈에 보이는 응답이 없는 Blind 상황에서 사용하며 참과 거짓 페이로드를 이용해서 나오는 
+            응답의 차이가 있을 경우 SQL-Injection이 가능하다고 판단하고, 서버가 응답하는 참 또는 거짓 정보를 통해 비밀번호나 내부 DB의 정보 등을 질의 응답 방식으로 유추해 낼 수 있다.</p>
+            <h3>&nbsp;&nbsp;대응 방안</h3>
+            <p>문자열 필터링을 통해 대부분의 SQL injection 공격을 방어할 수 있다.</p>
+            <h4> - ASP.net (문자열 필터링)</h4>
+            <pre>
+private string SafeSqlLiteral(string inputSQL)
+{
+    Str = inputSQL.Replace("'","''");
+    Str = str. Replace(";","");
+    Str = str. Replace("--","");
+    Str = str. Replace("|","");
+    Str = str. Replace(":","");
+    Str = str. Replace("+","");
+    Str = str. Replace("\","");
+    Str = str. Replace("/","");
+    .....
+    return str;
+}
+            </pre>
+            <h4> - Dynamic SQL</h4>
+            <pre>
+“SELECT Count(*) FROM Users WHERE UserName = @username “ + “AND Password = @password”;
+Int intRecs;
+            </pre>
+            <h4> - JSP (문자열 유효성 검증)</h4>
+            <pre>
+public static String makeQuery(String str) {
+    String result = "";
+    if(str != null) {
+        result = chkNull(replace(str, "'", ""));
+        result = chkNull(replace(str, ";", ""));
+        result = chkNull(replace(str, "--", ""));
+        result = chkNull(replace(str, "|", ""));
+        result = chkNull(replace(str, ":", ""));
+        result = chkNull(replace(str, "+", ""));
+        result = chkNull(replace(str, "\", ""));
+        result = chkNull(replace(str, "/", ""));
+        result = chkNull(replace(str.toLowerCase(), "select", ""));
+        result = chkNull(replace(str.toLowerCase(), "update", ""));
+        result = chkNull(replace(str.toLowerCase(), "delete", ""));
+        result = chkNull(replace(str.toLowerCase(), "insert", ""));
+        result = chkNull(replace(str.toLowerCase(), "where", ""));
+        result = chkNull(replace(str.toLowerCase(), "from", "")); result = "'"+result+"'";
+    }
+    return result;
+}
+public static String chkNull(String str) {
+    if (str == null) return "";
+    else
+        return str;
+}
+            </pre>
+            <h4> - PHP</h4>
+            <h5>1. addslashes 함수를 이용한 특정 문자열 필터링</h5>
+            <pre>
+$query = sprintf("SELECT id,password,username FROM user_table WHERE _id='%s';",addslashes($id));
+// id 변수를 문자형으로 받고, id 변수의 특수문자를 일반문자로 변환
+// @로 php 에러 메시지를 막음
+$result = @OCIParse($conn, $query);
+if (!@OCIExecute($result))
+    error("SQL 구문 에러");
+    exit;
+@OCIFetchInto($result,&$rows);
+            </pre>
+            <h5>2. eregi_replace 함수를 이용한 특정 문자열 필터링 적용 </h5>
+            <pre>
+function SQL_Injection($get_Str) {
+    return eregi_replace("( select| union| insert| update| delete| drop|\"|\'|#|\/\*|\*\/|\\\|\;)","",$get_Str);
+}
+            </pre>
+            <h5>php.ini 설정 중 magic_quotes_gps 옵션을 이용하여 특정 문자열 필터링 적용(PHP 6.0 이하)</h5>
+            <pre>
+magic_quotes_gpc = on
+            </pre>
+            </div>
+        </div>
+      </div>
+      <!-- /row -->
+    </div>
+    <!-- /container -->
+  </div>
+  <!-- /grey -->
+
+  <!-- +++++ Second Post +++++ -->
+  <div id="white">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2">
+                <h2 id="8" style="text-align: center;">[ Cross Site Script(XSS) ] </h2>
+                <br>
+                <img src="{% static '/img/vuln_info/xss.jpg' %}" width="100%" height="auto">
+                <br>
+                <h3>&nbsp;&nbsp;취약점 설명</h3>
+                <p>HTML을 동적으로 변경하거나 데이터를 전송하는 등의 작업이 가능, 만약 자바스크립트를 임의의 사용자나 공격자가 
+                    웹에 삽입하거나 실행을 유도할 수 있다면 문제점이 될 가능성이 크다. 악성 스크립트가 포함된 URL을 사용자가 클릭을 유도하여 클라이언트를 공격, 
+                    서버에 검색내용의 입력 시 검색결과가 없으면 브라우저에서 입력한 값을 그대로 HTML 문서에 포함하여 응답한다. </p>
+                <h4> - Reflected XSS</h4>      
+                <img src="{% static '/img/vuln_info/xss2.jpg' %}" width="100%" height="auto">
+                <p>XSS 공격으로 악성 스크립트가 포함된 URL을 사용자가 클릭을 유도하여 클라이언트를 공격, 
+                    서버에 검색내용의 입력 시 검색결과가 없으면 브라우저에서 입력한 값을 그대로 HTML 문서에 포함하여 응답한다.</p>
+                <h3>&nbsp;&nbsp;대응 방안</h3>
+                <p>문자열 필터링을 통해 대부분의 XSS 공격을 방어할 수 있다.</p>
+                <h4> - URLDecoder, 특수 문자 필터링</h4>
+                <h5>1. ASP</h5>
+                <pre>
+&lt;%
+… 중략 …
+If use_HTML Then
+    content = Server.HTMLEncode(content)
+… 중략 …
+Sub ReplaceStr(content, byref str) content = replace(content, "'", " \'")
+    content = replace(content, "&", "&amp;")
+    content = replace(content, " \'", "&quot")
+    content = replace(content, "<", "&lt")
+    content = replace(content, ">", "&gt")
+    str = content
+End Sub
+    … 중략 …
+%&gt; </pre>
+                <h5>2. PHP</h5>
+                <pre>
+… 중략 …
+if($use_html == 1) // HTML tag를 사용해야 하는 경우 부분 허용
+    $memo = str_replace("<", "&lt", $memo);// HTML TAG 모두 제거
+    $tag = explode(",", $use_tag);
+    for($i=0; $i<count($tag); $i++) { // 허용할 TAG만 사용할 수 있도록 변경 
+    $memo =  eregi_replace("&lt".$tag[$i]." ", "<".$tag[$i]." ", $memo);
+    $memo = eregi_replace("&lt".$tag[$i].">", "<".$tag[$i].">", $memo);
+    $memo = eregi_replace("&lt/".$tag[$i], "</".$tag[$i], $memo); }
+else // HTML tag를 사용하지 못하게 할 경우 
+    $memo = str_replace("<", "&lt", $memo);
+    $memo = str_replace(">", "&gt", $memo);
+… 중략 …</pre>
+                <h5>3. JSP</h5>
+                <pre>
+<%
+… 중략 …
+string subject = request.getParameter("subject_BOX");
+        subject = subject.replaceAll(“<”, “&lt”);
+        subject = subject.replaceAll(“>”, “&gt”);
+    … 중략 …
+%></pre>
+
+            </div>
+        </div>
+        <!-- /row -->
+    </div>
+
+</div>
+<div id="grey">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2">
+                <h2 id="9" style="text-align: center;">[ SSI Injection ] </h2>
+                <br>
+                <img src="{% static '/img/vuln_info/ssii.jpg' %}" width="100%" height="auto">
+                <br>
+                <h3>&nbsp;&nbsp;취약점 설명</h3>
+                <p>SSI : CGI 프로그램을 작성하거나 혹은 서버사이드 스크립트를 사용하는 언어로, 웹 서버가 사용자에게 페이지를 제공하기 전에 구문을 해석하도록 지시하는 역할을 함</p>
+                <p>SSI(Server-Side Includes) 인젝션: HTML 문서 내 입력받은 변수 값을 서버 측에서 처리할 때 부적절한 명령문이 포함 및 실행되어 서버의 데이터가 유출되는 취약점</p>
+
+                <h3>&nbsp;&nbsp;대응 방안</h3>
+                <h4> - 특수문자 필터링</h4>
+                <p>htmlspecialchars 함수 사용 : 문자열에서 특정한 특수 문자를 HTML 엔티티로 변환한다.</p>
+                <img src="{% static '/img/vuln_info/filtering.jpg' %}" width="100%" height="auto">
+                <img src="{% static '/img/vuln_info/filtering2.jpg' %}" width="100%" height="auto">
+            </div>
+        </div>
+        <!-- /row -->
+    </div>
+</div>
+
+<script>
+window.addEventListener('DOMContentLoaded', function(){
+    
+});
+
+
+
+
+</script>
+{% endblock %}

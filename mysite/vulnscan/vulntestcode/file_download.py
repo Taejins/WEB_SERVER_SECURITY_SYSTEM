@@ -3,9 +3,13 @@ from bs4 import BeautifulSoup as bs
 import requests
 
 
-def file_download(url, ori_url, cookie):
-    req = requests.get(url, cookies=cookie)
+def file_download(s, url):
+    split_url = url.split('/')
+    ori_url = f"{split_url[0]}//{split_url[2]}"
+    req = s.get(url)
     links = bs(req.text,'html.parser').find_all('a')
+
+    result=[]
 
     down_url = ""
     down_str = ""
@@ -17,7 +21,7 @@ def file_download(url, ori_url, cookie):
                 down_str = str[:-1]
                 break
         if down_url : break
-    if not down_url : return 0
+    if not down_url : return result
 
     if down_url[0] == "/": full_url = ori_url+down_url
     else : full_url = down_url
@@ -47,7 +51,9 @@ def file_download(url, ori_url, cookie):
     check_url = f'{full_url.scheme}://{full_url.netloc}{full_url.path}'
     for vuln in check_vuln:
         data[down_str] = vuln
-        req = requests.get(check_url, cookies=cookie, params=data)
+        req = s.get(check_url, params=data)
         
         if "Content-Disposition" in req.headers :
-            print("Download vuln Detected : ", req.url)
+            result.append(f"{req.url}") 
+            
+    return result

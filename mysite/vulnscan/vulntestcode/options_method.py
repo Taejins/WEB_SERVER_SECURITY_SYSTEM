@@ -1,9 +1,10 @@
 import requests
 
-def unnecessary_method(url):
+def unnecessary_method(s, url):
     options_check_list = ['Allow', 'Access-Control-Allow-Methods','Public']
     vuln_method = ["OPTIONS", "PUT", "DELETE", "TRACE"]
-    req = requests.options(url)
+    req = s.options(url)
+    
     headers = req.headers
     detect_method = []
     for i in options_check_list:
@@ -13,6 +14,7 @@ def unnecessary_method(url):
                     detect_method.append(j)
             break
     return detect_method
+    
     
             
         

@@ -1,0 +1,100 @@
+{% extends 'vulnscan/base.html' %}
+{% load static %}
+
+{% block contents %}
+    <div class="container pt">
+        <div class="row">
+            <div class="col-lg-6 col-lg-offset-3 centered">
+                <h4>검사 준비 > <span class="highlight">검사 중</span> > 검사 완료 > 완료</h4>
+                <h1>Vulnerability Check</h1>
+                
+            </div>
+        </div>  
+        <div class="row">
+            <div class="custom-border" style="height:500px; overflow:auto;" >
+                
+                <table class="table centered" id="result_table" style="table-layout:fixed">
+                    <tr>
+                        <th style="width:30%">검사 항목</th>
+                        <th style="width:10%">상태</th>
+                        <th style="width:60%">요약 정보</th>
+                    </tr>
+                </table>
+                <div id="result"></div>
+            </div>
+            <div class="col-lg-2 centered">
+                <h3> 검사 진행도 </h3>
+            </div>
+            <div class="col-lg-10">
+                <br>
+                <div class='progress-wrapper'>
+                    <div id='progress-bar' class='progress-bar' style="background-color: #68a9ef; width: 0%;">&nbsp;</div>
+                    <div id="progress-bar-message">Waiting for progress to start...</div>
+                </div>
+                <br>
+            </div>
+        </div>
+        
+        <div class="row">
+            <br>
+            <div class="col-lg-6 col-lg-offset-3  centered">
+                <button class="bb btn btn-lg" id="next" onClick="location.href='{% url 'vuln:scan_end' task_id %}'" style="display:none;">결과 확인</button>
+                <button class="bb btn btn-lg" id="previous" onClick="location.href='{% url 'vuln:scan_start'%}'" style="display:none;">돌아가기</button>
+            </div>
+        </div>  
+        
+        
+        
+    </div>
+
+
+    <script src="{% static 'celery_progress/celery_progress.js' %}"></script>
+    <script>
+        function xss_filter(content){
+            return content.replaceAll(/</g, "&lt;").replaceAll(/>/g, "&gt;")
+        }
+
+        function customProgress(progressBarElement, progressBarMessageElement, progress){
+            taskNumber = parseInt(progress.current)
+            taskPercentage = taskNumber / progress.total * 100
+            if(taskPercentage>=100){ $("#next").show();}
+
+            progressBarElement.style.backgroundColor = "#68a9ef"
+            progressBarElement.style.width = taskPercentage + "%"
+
+            data = JSON.parse(progress.description)
+            
+            
+            progressMessage = xss_filter(data.content+"")
+            progressBarMessageElement.innerHTML = "";
+
+            if($("#result_table tr:last>td:eq(0)").html() != data.name){
+                if (data.status == "탐지"){
+                    $("#result_table").append("<tr class='danger'><td>"+data.name+"</td><td>"+data.status+"</td><td style='overflow:hidden; text-overflow: ellipsis; white-space:nowrap;'>"+progressMessage+"</td></tr>");
+                }
+                else {
+                    $("#result_table").append("<tr class='success'><td>"+data.name+"</td><td>"+data.status+"</td><td style='overflow:hidden; text-overflow: ellipsis; white-space:nowrap;'>"+progressMessage+"</td></tr>");
+                }
+                
+            }
+            
+        }
+        function customSuccess(resultElement, result) {
+            $("#next").show();
+        }
+        function csError(resultElement, result) {
+            $("#previous").show();
+        }
+        document.addEventListener("DOMContentLoaded", function () {
+            var progressUrl = "{% url 'celery_progress:task_status' task_id %}";
+            CeleryProgressBar.initProgressBar(progressUrl, {
+                onProgress: customProgress,
+                onSuccess: customSuccess,
+                onError: csError,
+            });
+        });
+        
+    </script>
+    
+    
+{% endblock %}
