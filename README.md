@@ -93,4 +93,42 @@ celery -A mysite worker -l info --pool=threads
   
 ---
 ## 구현 화면
+### 메인페이지
+
+##### 메인페이지는 간단한 기능 소개와 검사 시작 버튼으로 구성
+
+<img src="./readmeIMG/img_main.bmp" width=800 height=auto>
   
+### 검사 준비 페이지
+
+##### URL 입력 페이지는 입력한 URL의 유효, 접근 가능을 확인하며 로그인 세션 필요시 로그인 페이지의 내용을 이용해 사용자의 입력을 요구 
+
+* URL이 바로 접근 가능한 경우 
+<img src="./readmeIMG/img_ready.bmp" width=800 height=auto>
+  
+* 로그인 세션이 필요한 경우
+<img src="./readmeIMG/img_ready2.bmp" width=800 height=auto>
+  
+  ### 검사 진행 페이지
+  
+  ##### 검사 진행 페이지에서는 실시간으로 검사 항목에 대한 탐지 현황을 확인할 수 있으며 탐지된 경우 요약 정보를 알려주며 붉은색으로 표시되고 미탐지의 경우 초록색으로 표시하여 가시적으로 알 수 있도록 구성하였다. 검사가 끝났을 시 결과 확인 버튼이 나타난다.
+  
+  * 검사가 진행 중인 경우
+  <img src="./readmeIMG/img_progress.bmp" width=800 height=auto>
+  
+   * 검사 진행이 완료된 경우
+  <img src="./readmeIMG/img_progress2.bmp" width=800 height=auto>
+  
+  ### 검사 완료 페이지
+  ##### 검사 완료 페이지는 검사 결과를 바탕으로 총 점수, 소요 시간, 검출 항목 수를 나타내고 점검 항목에 따른 간략한 설명과 검출된 취약점 수를 BAR형태로 보여준다. 아래 검출된 취약점 정보에서는 발견된 취약점에 대한 간략한 설명을 나타내고 클릭 시 취약점 상세 정보와 그에 따른 보완 방법에 대해 설명한다.(다음페이지) 상세 정보에서는 검사에서 발견된 취약정보, URL, PAYLOAD를 취약 항목 별로 나타낸다.
+  <img src="./readmeIMG/img_result.bmp" width=800 height=auto>
+  <img src="./readmeIMG/img_result2.bmp" width=800 height=auto>
+  <img src="./readmeIMG/img_result3.bmp" width=800 height=auto>
+  
+  ### 취약점 정보 및 PDF 저장
+  * 취약점 상세 정보 페이지는 취약점 별 설명과 보완 방법을 나타내고 있다.
+  <img src="./readmeIMG/img_info.bmp" width=800 height=auto>
+  * PDF 저장 버튼을 이용하면 해당 검사 결과를 PDF로 저장하여 확인할 수 있다. 
+  <img src="./readmeIMG/img_pdf.bmp" width=800 height=auto>
+  
+  ---
